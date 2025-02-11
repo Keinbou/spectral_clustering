@@ -47,6 +47,28 @@ void printMatrix(size_t row_i, size_t col_i, float (*A)[row_i][col_i], size_t r,
     }
     printf("%s", str);
     p("%zux%zu matrix. %zux%zu printed.", row_i, col_i, r, c);
+    if ( row_i==col_i )
+        printf("Symmetrical: %i\n\n", isSymmetrical(row_i, A));
+    p("");
+}
+
+void printList(size_t len, float *list, size_t len_print, const char* title)
+// pass -1 or >row_i as n to read all rows
+{
+    p("%s", title);
+    if (len_print==-1 || len_print>len) len_print=len;
+    char * str = "";
+    for(size_t i=0; i<len; ++i) {
+        if( i==len_print )
+        {
+            break;
+        }
+        str = concat(str, printfStr("%i\t", i));
+        str = concat(str, float2String(list[i]));
+        str = concat(str, "\n");
+    }
+    printf("%s", str);
+    p("%zu length list. %zu printed.", len, len_print);
     p("");
 }
 
@@ -128,7 +150,18 @@ void* trimLastCol(size_t row_i, size_t col_i, float (*A)[row_i][col_i])
     return S;
 }
 
-void distances(size_t row_i, size_t col_i, float (*S)[row_i][col_i], float (*W)[row_i][row_i])
+void* trimMatrix(size_t row_i, size_t col_i, size_t new_col_i, float (*A)[row_i][col_i], size_t from, size_t to)
+{
+    float (*T)[row_i][new_col_i] = malloc(sizeof(*T));
+    for(size_t i=0; i<row_i; ++i)
+        for(size_t j=from, l=0; j<=to; ++j, ++l)
+        {
+            (*T)[i][l] = (*A)[i][j];
+        }
+    return T;
+}
+
+void distances(size_t row_i, size_t col_i, float (*S)[row_i][col_i], float (*N)[row_i][row_i])
 {
     for(size_t i=0; i<row_i; ++i) {
         float *arr_a = (float*)malloc(sizeof(float)*col_i);
@@ -143,7 +176,7 @@ void distances(size_t row_i, size_t col_i, float (*S)[row_i][col_i], float (*W)[
             {
             arr_b[d] = (*S)[j][d];
             }
-            (*W)[i][j] = manhattan(col_i, arr_a, arr_b);
+            (*N)[i][j] = manhattan(col_i, arr_a, arr_b);
             free(arr_b);
         }
         free(arr_a);
@@ -157,7 +190,7 @@ int compareDist(const void* a, const void* b)
     return (af>bf)-(af<bf);
 }
 
-void knnGraph(size_t size, float (*W)[size][size], int k)
+void knnGraph(size_t size, float (*N)[size][size], float (*W)[size][size], int k)
 {
     for(size_t i=0; i<size; ++i)
     {
@@ -165,19 +198,16 @@ void knnGraph(size_t size, float (*W)[size][size], int k)
         for(size_t j=0; j<size; ++j)
         {
             row[j].index = j;
-            row[j].dist  = (*W)[i][j];
+            row[j].dist  = (*N)[i][j];
         }
         size_t s = sizeof(row)/sizeof(row[0]);
         qsort(row, s, sizeof(dpair), compareDist);
-        for(size_t j=0; j<size; ++j)
-        {
-            (*W)[i][j] = 0;
-        }
         for(size_t j=0, added=0; added<k && j<size; ++j)
         {
             size_t index = row[j].index;
             if (index==i) continue;
             (*W)[i][index] = 1;
+            (*W)[index][i] = 1;
             ++added;
         }
     }
@@ -205,7 +235,7 @@ void degreeMatrix(size_t size, float (*D)[size][size], float (*W)[size][size])
     }
 }
 
-void degreeMatrix_quick(size_t size, float (*D)[size][size], int k)
+void degreeMatrix_quick(size_t size, float (*D)[size][size], int k) // and shit
 {
     for(int i=0; i<size; ++i)
     {
@@ -222,4 +252,156 @@ void substractMatrices(size_t size, float (*L)[size][size],
     {
         (*L)[i][j] = (*D)[i][j] - (*W)[i][j];
     }
+}
+
+void Givens(size_t size, int Nrun, float (*L)[size][size], float (*V)[size][size], double tol)
+{
+    int i,j,k,  p,q,r;
+    float c,s,  t,tmax,tau,  alpha,  xp,xq, eps=1.0E-22;
+    double sum;
+
+    for (i=0; i<size; ++i)
+    {
+        for (j=0; j<size; ++j)
+        {
+            if (i==j) (*V)[i][j]=1.0; else (*V)[i][j]=0.0;
+        }
+    }
+
+    for (k=0; k<Nrun; ++k)
+    {
+        tmax = -1;
+        sum  = 0.0;
+        for (i=0; i<size; ++i)
+        {
+            for (j=i+1; j<size; ++j)
+            {
+                t = _abs((*L)[i][j]);
+                sum += (t*t);
+                if ( t>tmax ) { tmax=t; p=i; q=j; }
+            }
+        }
+        sum = sqrt(2.0*sum);
+        if ( sum < tol ) return;
+        alpha = ( (*L)[q][q]-(*L)[p][p] ) / 2.0 / (*L)[p][q];
+        t = ( (alpha>eps)? 1.0/(alpha+sqrt(1.0+alpha*alpha)) :
+              (alpha<eps)? 1.0/(alpha-sqrt(1.0+alpha*alpha)) : 1.0);
+        
+        c   = 1.0/sqrt(1.0+t*t);
+        s   = c*t;
+        tau = s/(1.0+c);
+
+        for (r=0  ; r<p   ; ++r) (*L)[p][r] = c*(*L)[r][p] - s*(*L)[r][q];
+        for (r=p+1; r<size; ++r) if (r!=q) (*L)[r][p] = c*(*L)[p][r] - s*(*L)[q][r];
+
+        for (r=0  ; r<p   ; ++r) (*L)[q][r] = s*(*L)[r][p] + c*(*L)[r][q];
+        for (r=p+1; r<q   ; ++r) (*L)[q][r] = s*(*L)[p][r] + c*(*L)[r][q];
+        for (r=q+1; r<size; ++r) (*L)[r][q] = s*(*L)[p][r] + c*(*L)[q][r];
+
+        (*L)[p][p] = (*L)[p][p] - t*(*L)[p][q];
+        (*L)[q][q] = (*L)[q][q] + t*(*L)[p][q];
+        (*L)[q][p] = 0.0;
+
+        for (i=0  ; i<size; ++i)
+        for (j=i+1; j<size; ++j)
+            (*L)[i][j] = (*L)[j][i];
+
+        for (i=0; i<size; ++i)
+        {
+            xp = (*V)[i][p];
+            xq = (*V)[i][q];
+            (*V)[i][p] = c*xp - s*xq;
+            (*V)[i][q] = s*xp + c*xq;
+        }
+    }
+    return;
+}
+
+float _random(int upper_bound)
+{
+    return (float)(((double)(rand()%upper_bound) - (double)(upper_bound/2))/upper_bound);
+}
+
+float* _kmeans(size_t row_i, size_t col_i, float (*V)[row_i][col_i], int k)
+{
+    float (*Centers)[k][col_i]  = malloc(sizeof(*Centers));
+    float *clustered = malloc(sizeof(float)*row_i);
+    int seed_inc = 0;
+    for (int i=0; i<row_i; ++i) clustered[i] = -1;
+
+    for (int i=0; i<k; ++i)
+    {
+        srand(time(NULL)+seed_inc);
+        seed_inc += 1;
+        float x = _random(UPPER_BOUND);
+        (*Centers)[i][i] = x;
+    }
+
+    float *center = malloc(sizeof(float)*col_i);
+    float *dot = malloc(sizeof(float)*col_i);
+    float minDist;
+    int cluster;
+    bool changed;
+    do
+        {
+        changed = false;
+        for (int i=0; i<row_i; ++i)
+        {
+            for (int j=0; j<col_i; ++j) dot[j] = (*V)[i][j];
+            minDist = MAXFLOAT;
+            cluster = -1;
+            for (int c=0; c<k; ++c)
+                {
+                for (int l=0; l<col_i; ++l) center[l] = (*Centers)[c][l];
+                float distance = manhattan(col_i, center, dot);
+                if (distance<minDist) { minDist=distance; cluster=c; } 
+                }
+            if (clustered[i] != cluster) changed = true;
+            clustered[i] = cluster;
+        }
+        for (int c=0; c<k; ++c)
+        {
+            size_t count = 0;
+            for (int j=0; j<col_i; ++j) (*Centers)[c][j] = 0.0;
+            for (int j=0; j<row_i; ++j) {
+                if (clustered[j]==c)
+                    {
+                        count += 1;
+                        for (int l=0; l<k; ++l)
+                            {
+                                (*Centers)[c][l] += (*V)[j][l];
+                            }
+                    }
+            }
+            if (count == 0) 
+                {
+                for (int l=0; l<col_i; ++l)
+                    {
+                    srand(time(NULL)+seed_inc);
+                    seed_inc += 1;
+                    float x = _random(UPPER_BOUND);
+                    (*Centers)[c][l] = x;
+                    }
+                }
+            else
+                {
+                for (int l=0; l<col_i; ++l)
+                    {
+                        (*Centers)[c][l] /= count;
+                    }
+                }
+        }
+    } while (changed);
+    free(Centers);
+    return clustered;
+}
+
+bool isSymmetrical(size_t size, float (*A)[size][size])
+{
+    for (int i=0; i<size; ++i)
+        for (int j=i; j<size; ++j)
+        {
+            if ((*A)[i][j]!=(*A)[j][i]) return false;
+        }
+    return true;
 }

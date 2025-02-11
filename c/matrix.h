@@ -1,5 +1,8 @@
 #pragma once
-#include "fileFunc.c"
+#include "file.c"
+#include <time.h>
+#include <math.h>
+#define UPPER_BOUND 20
 
 struct Dist_I_Pair
 {
@@ -22,12 +25,13 @@ void fill(size_t row_i, size_t col_i, float (*A)[row_i][col_i], float filling);
 void* trimLastCol(size_t row_i, size_t col_i, float (*A)[row_i][col_i]);
 void distances(size_t row_i, size_t col_i, float (*S)[row_i][col_i], float (*W)[row_i][row_i]);
 int compareDist(const void* a, const void* b);
-void knnGraph(size_t size, float (*W)[size][size], int k);
+void knnGraph(size_t size, float (*N)[size][size], float (*W)[size][size], int k);
 void degreeMatrix(size_t size, float (*D)[size][size], float (*W)[size][size]);
 void degreeMatrix_quick(size_t size, float (*D)[size][size], int k);
 void substractMatrices(size_t size, float (*L)[size][size],
                                     float (*D)[size][size],
                                     float (*W)[size][size]);
+bool isSymmetrical(size_t size, float (*A)[size][size]);
 
 // FOR TESTING
 void toOut(size_t size, float (*W)[size][size], float **out);

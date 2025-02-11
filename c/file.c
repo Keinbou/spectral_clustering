@@ -1,5 +1,5 @@
 #pragma once
-#include "fileFunc.h"
+#include "file.h"
 
 int dataWidth(const char* filename)
 {
