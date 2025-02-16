@@ -11,7 +11,7 @@ float _pow2 (float num)
     return num*num;
 }
 
-float manhattan (size_t len, float *a, float *b)
+float _manhattan (size_t len, float *a, float *b)
 {
     float dist = 0;
     for( int i=0;i<len;++i )
@@ -22,11 +22,10 @@ float manhattan (size_t len, float *a, float *b)
 }
 
 void printMatrix(size_t row_i, size_t col_i, float (*A)[row_i][col_i], size_t r, size_t c, const char* title)
-// pass -1 or >row_i as n to read all rows
 {
     p("%s", title);
-    if (r==-1 || r>row_i) r=row_i;
-    if (c==-1 || c>col_i) c=col_i;
+    if (r<0 || r>row_i) r=row_i;
+    if (c<0 || c>col_i) c=col_i;
     char * str = "";
     for(size_t i=0; i<row_i; ++i) {
         if( i==r )
@@ -53,10 +52,9 @@ void printMatrix(size_t row_i, size_t col_i, float (*A)[row_i][col_i], size_t r,
 }
 
 void printList(size_t len, float *list, size_t len_print, const char* title)
-// pass -1 or >row_i as n to read all rows
 {
     p("%s", title);
-    if (len_print==-1 || len_print>len) len_print=len;
+    if (len_print<0 || len_print>len) len_print=len;
     char * str = "";
     for(size_t i=0; i<len; ++i) {
         if( i==len_print )
@@ -118,7 +116,7 @@ int read_csv_vla(const char* filename, size_t N, size_t D, float (*A)[N][D])
 
 int k_clusters(size_t N, size_t D, float (*A)[N][D])
 {
-    int k=-1; // cluster numeration start from 0, which can be the max value
+    int k=-1; // cluster numeration starts from 0. it can be the max value
     for(size_t i=0; i<N; ++i) {
         float t = (*A)[i][D-1];
         if(t>k)
@@ -176,7 +174,7 @@ void distances(size_t row_i, size_t col_i, float (*S)[row_i][col_i], float (*N)[
             {
             arr_b[d] = (*S)[j][d];
             }
-            (*N)[i][j] = manhattan(col_i, arr_a, arr_b);
+            (*N)[i][j] = _manhattan(col_i, arr_a, arr_b);
             free(arr_b);
         }
         free(arr_a);
@@ -192,6 +190,7 @@ int compareDist(const void* a, const void* b)
 
 void knnGraph(size_t size, float (*N)[size][size], float (*W)[size][size], int k)
 {
+    fill(size, size, W, 0);
     for(size_t i=0; i<size; ++i)
     {
         dpair row[size];
@@ -224,6 +223,7 @@ void toOut(size_t size, float (*W)[size][size], float **out)
 
 void degreeMatrix(size_t size, float (*D)[size][size], float (*W)[size][size])
 {
+    fill(size, size, D, 0);
     for(int i=0; i<size; ++i)
     {
         float sum = 0;
@@ -329,12 +329,13 @@ float* _kmeans(size_t row_i, size_t col_i, float (*V)[row_i][col_i], int k)
     int seed_inc = 0;
     for (int i=0; i<row_i; ++i) clustered[i] = -1;
 
-    for (int i=0; i<k; ++i)
+    for (int i=0; i<k    ; ++i)
+    for (int j=0; j<col_i; ++j)
     {
         srand(time(NULL)+seed_inc);
         seed_inc += 1;
         float x = _random(UPPER_BOUND);
-        (*Centers)[i][i] = x;
+        (*Centers)[i][j] = x;
     }
 
     float *center = malloc(sizeof(float)*col_i);
@@ -353,7 +354,7 @@ float* _kmeans(size_t row_i, size_t col_i, float (*V)[row_i][col_i], int k)
             for (int c=0; c<k; ++c)
                 {
                 for (int l=0; l<col_i; ++l) center[l] = (*Centers)[c][l];
-                float distance = manhattan(col_i, center, dot);
+                float distance = _manhattan(col_i, center, dot);
                 if (distance<minDist) { minDist=distance; cluster=c; } 
                 }
             if (clustered[i] != cluster) changed = true;
@@ -396,6 +397,33 @@ float* _kmeans(size_t row_i, size_t col_i, float (*V)[row_i][col_i], int k)
     return clustered;
 }
 
+float* _sortEigenvectors(size_t size, float (*L)[size][size], float (*V)[size][size], int k)
+{
+    dpair eigenvalues[size];
+    for(size_t i=0; i<size; ++i)
+    {
+        eigenvalues[i].index = i;
+        eigenvalues[i].dist  = (*L)[i][i];
+    }
+    size_t s = sizeof(eigenvalues)/sizeof(eigenvalues[0]);
+    qsort(eigenvalues, s, sizeof(dpair), compareDist);
+    for(size_t i=0; i<=k; ++i)
+    {
+        size_t index = eigenvalues[i].index;
+        if (index==i) continue;
+        for (size_t j=0; j<size; ++j)
+        {
+            float buff = (*V)[j][i];
+            (*V)[j][i] = (*V)[j][index];
+            (*V)[j][index] = buff;
+        }
+    }
+    float *evalues = malloc(sizeof(float)*size);
+    for (int i=0; i<size; ++i)
+        evalues[i] = eigenvalues[i].dist;
+    return evalues;
+}
+
 bool isSymmetrical(size_t size, float (*A)[size][size])
 {
     for (int i=0; i<size; ++i)
@@ -404,4 +432,73 @@ bool isSymmetrical(size_t size, float (*A)[size][size])
             if ((*A)[i][j]!=(*A)[j][i]) return false;
         }
     return true;
+}
+
+float** VLA2floatPP(size_t row_i, size_t col_i, float (*A)[row_i][col_i])
+{
+    float **pp = malloc(sizeof(float*)*row_i);
+    for (int i=0; i<row_i; ++i)
+    {
+        pp[i] = malloc(sizeof(float)*col_i);
+        for (int j=0; j<col_i; ++j)
+        {
+            pp[i][j] = (*A)[i][j];
+        }
+    }
+    return pp;
+}
+
+void floatPP2VLA(float **pp, size_t row_i, size_t col_i, float (*A)[row_i][col_i])
+{
+    for (int i=0; i<row_i; ++i)
+    {
+        for (int j=0; j<col_i; ++j)
+        {
+            (*A)[i][j] = pp[i][j];
+        }
+    }
+}
+
+int read_csv_vla_f(const char* filename, size_t N, size_t D, float (*A)[N][D])
+{
+    FILE* f=fopen(filename, "r");
+    if(f==NULL){
+        errmsg("There is no file to be opened.");
+    }
+    size_t dur=0;
+    char* line=NULL;
+    ssize_t len;
+
+    int flag = 0;
+    size_t i = 0;
+    while( (len=getline(&line, &dur, f))!=-1 ){
+        if(!flag){ //skip the first line
+            flag=1;
+            continue;
+        }
+        if(i>=N){
+            return N;
+        }
+        char *str, *token;
+        str=strdup(line);
+        size_t j=0;
+        while( (token=strsep(&str, ",")) ){
+            if(strcmp(token, "")==0) continue;
+            if ( j<(D-1) )
+            {
+                (*A)[i][j] = atof(token);
+                ++j;
+            } else
+            {
+                (*A)[i][D-1] = atof(token);
+                break;
+            }
+        }
+        ++i;
+    }
+    if(i<N){
+        printf("There are less rows in the dataset then requested.\n");
+        return i;
+    }
+    return N;
 }

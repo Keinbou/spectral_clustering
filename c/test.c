@@ -1,12 +1,14 @@
 #include "matrix.c"
 #include "spectral.c"
 
-int main(){/*
+int main(){
+    
     size_t s = 5;
-    int Nrun = 31;
+    int max_sweeps = 3;
+    int Nrun = max_sweeps*(s*(s-1))/2;
     double tol = 1.0E-22;
 
-    int matrixType = 4;
+    int matrixType = 2;
     LOG(2, "matrixType:", int2String(matrixType));
     if (matrixType == 0 || matrixType == 1 || matrixType == 2)
     {
@@ -28,63 +30,33 @@ int main(){/*
     }
     if (matrixType == 0) // Toeplitz Matrix / Tridiagonal Matrix
     {
-        (*L)[0][0] = 1.0000; (*L)[0][1] = 0.5000; (*L)[0][2] = 0.2500; (*L)[0][3] = 0.1250; (*L)[0][4] = 0.0625;
-        (*L)[1][0] = 0.5000; (*L)[1][1] = 1.0000; (*L)[1][2] = 0.5000; (*L)[1][3] = 0.2500; (*L)[1][4] = 0.1250;
-        (*L)[2][0] = 0.2500; (*L)[2][1] = 0.5000; (*L)[2][2] = 1.0000; (*L)[2][3] = 0.5000; (*L)[2][4] = 0.2500;
-        (*L)[3][0] = 0.1250; (*L)[3][1] = 0.2500; (*L)[3][2] = 0.5000; (*L)[3][3] = 1.0000; (*L)[3][4] = 0.5000;
-        (*L)[4][0] = 0.0625; (*L)[4][1] = 0.1250; (*L)[4][2] = 0.2500; (*L)[4][3] = 0.5000; (*L)[4][4] = 1.0000;
+        read_csv_vla_f("matrices/toeplitz.csv", s, s, L);
     } else if (matrixType == 1) // Real symmetric Matrix with Zer0s
     {
-        (*L)[0][0] = 4.0000; (*L)[0][1] = 1.0000; (*L)[0][2] = 0.0000; (*L)[0][3] = 0.0000; (*L)[0][4] = 0.0000;
-        (*L)[1][0] = 1.0000; (*L)[1][1] = 4.0000; (*L)[1][2] = 1.0000; (*L)[1][3] = 0.0000; (*L)[1][4] = 0.0000;
-        (*L)[2][0] = 0.0000; (*L)[2][1] = 1.0000; (*L)[2][2] = 4.0000; (*L)[2][3] = 1.0000; (*L)[2][4] = 0.0000;
-        (*L)[3][0] = 0.0000; (*L)[3][1] = 0.0000; (*L)[3][2] = 1.0000; (*L)[3][3] = 4.0000; (*L)[3][4] = 1.0000;
-        (*L)[4][0] = 0.0000; (*L)[4][1] = 0.0000; (*L)[4][2] = 0.0000; (*L)[4][3] = 1.0000; (*L)[4][4] = 4.0000;
+        read_csv_vla_f("matrices/real_symmetric_5x5.csv", s, s, L);
     } else if (matrixType == 2) // Example of a Laplacian graph Matrix
     {
-        (*L)[0][0] =  4.0000; (*L)[0][1] = -1.0000; (*L)[0][2] = -1.0000; (*L)[0][3] = -1.0000; (*L)[0][4] = -1.0000;
-        (*L)[1][0] = -1.0000; (*L)[1][1] =  2.0000; (*L)[1][2] =  0.0000; (*L)[1][3] = -1.0000; (*L)[1][4] =  0.0000;
-        (*L)[2][0] = -1.0000; (*L)[2][1] =  0.0000; (*L)[2][2] =  2.0000; (*L)[2][3] =  0.0000; (*L)[2][4] = -1.0000;
-        (*L)[3][0] = -1.0000; (*L)[3][1] = -1.0000; (*L)[3][2] =  0.0000; (*L)[3][3] =  3.0000; (*L)[3][4] = -1.0000;
-        (*L)[4][0] = -1.0000; (*L)[4][1] =  0.0000; (*L)[4][2] = -1.0000; (*L)[4][3] = -1.0000; (*L)[4][4] =  3.0000;
+        read_csv_vla_f("matrices/graph_Laplacian.csv", s, s, L);
     } else if (matrixType == 3) // 2x2 real symmetric Matrix
     {
-        (*L)[0][0] = 2.0000; (*L)[0][1] = 0.5000;
-        (*L)[1][0] = 0.5000; (*L)[1][1] = 6.0000;
+        read_csv_vla_f("matrices/real_symmetric_2x2.csv", s, s, L);
     } else if (matrixType == 4) // 2x2 diagonal Matrix
     {
-        (*L)[0][0] = 2.0000; (*L)[0][1] = 0.0000;
-        (*L)[1][0] = 0.0000; (*L)[1][1] = 6.0000;
+        read_csv_vla_f("matrices/real_diagonal_2x2.csv", s, s, L);
     }
     printMatrix(s, s, L, s, s, "Original matrix:");
     Givens(s, Nrun, L, V, tol);
     printMatrix(s, s, L, s, s, "Eigenvalues:");
-    printMatrix(s, s, V, s, s, "Eigenvectors:");*/
-    float *res = spectral(-1, 300, "../datasets/file_1.csv", 10, 3);
-    /*
-    float (*V)[3][3] = malloc(sizeof(*V));
-    (*V)[0][0] = 1; (*V)[0][1] = 0; (*V)[0][2] = 0;
-    (*V)[1][0] = 0; (*V)[1][1] = 1; (*V)[1][2] = 0;
-    (*V)[2][0] = 0; (*V)[2][1] = 0; (*V)[2][2] = 1;
-    float *clustered = kmeans(3, 3, V, 2);
-    printList(3, clustered, 3, "list");
-    *//*
-    size_t s = 200;
-    float (*L)[s][s] = malloc(sizeof(*L));
-    float (*V)[s][s] = malloc(sizeof(*V));
-    for (int i=0; i<s; ++i)
+    printMatrix(s, s, V, s, s, "Eigenvectors:");/*
+    float **res = spectral(-1, 300, "../datasets/three_clouds.csv", 10, 3);
+    for (int i=0; i<300; ++i)
     {
-        for (int j=0; j<s; ++j)
+        for (int j=0; j<3; ++j)
         {
-            if (j%2==0 && i%2==0) (*L)[i][j] = -1;
-            if (i==j) (*L)[i][j] = 100 - (j%2==1?0:1);
+            printf("%f ", res[i][j]);
         }
-    }
-    printMatrix(s,s,L,6,6,"matrix");
-    Givens(s, 31, L, V, 1.0E-22);
-    printMatrix(s,s,L,6,6,"eigenvalues");
-    printMatrix(s,s,V,6,6,"eigenvectors");*/
-    //free(L); free(V);
+        p("");
+    }*/
     return 0;
 }
 

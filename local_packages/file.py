@@ -29,3 +29,12 @@ def fileWidth(filepath:str|None = None) -> int:
     with open(filepath, "r") as file:
         row = file.readline()
     return len(row.split(","))
+
+
+def fileClusters(filepath:str|None = None) -> int:
+    s = set()
+    with open(filepath, "r") as file:
+        for i, line in enumerate(file.readlines()):
+            if i==0: continue
+            s.add(line.split(",")[-1])
+    return len(s)

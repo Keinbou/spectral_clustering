@@ -6,12 +6,13 @@ import matplotlib as mpl
 
 COLS = 4; ROWS = 2
 
+
 def setupMPL(filename, cols, rows, cls, cmap):
     font = {'family' : 'sans-serif',
             'weight' : 'bold',
             'size'   : 22}
-
     mpl.rc('font', **font)
+
 
     width  = rows*10
     length = cols*10
